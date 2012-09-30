@@ -61,6 +61,44 @@ class EventDispatcherTest extends TestCase
         $dispatcher->dispatchCommandEvent("post-install-cmd");
     }
 
+    public function testDispatcherCanWriteSuccessfulOutputToEventIO()
+    {
+        $eventCliCommand = 'phpunit';
+        $testCommandOutput = 'Test command output';
+
+        // ConsoleIO, which will eventually have Event output written to it
+        $consoleIO = $this->getMockBuilder('Composer\IO\ConsoleIO')
+            ->disableOriginalConstructor()
+            ->setMethods(array('write'))
+            ->getMock();
+        // THIS DOESNT WORK YET!
+        $consoleIO->expects($this->once())
+            ->method('write')
+            ->with($testCommandOutput);
+
+        // ProcessExecutor, which will execute "phpunit"
+        $process = $this->getMock('Composer\Util\ProcessExecutor');
+        $dispatcher = $this->getMockBuilder('Composer\Script\EventDispatcher')
+            ->setConstructorArgs(array(
+                $this->getMock('Composer\Composer'),
+                $consoleIO,
+                $process,
+            ))
+            ->setMethods(array('getListeners'))
+            ->getMock();
+
+        $listeners = array($eventCliCommand);
+        $dispatcher->expects($this->atLeastOnce())
+            ->method('getListeners')
+            ->will($this->returnValue($listeners));
+
+        $process->expects($this->once())
+            ->method('execute')
+            ->with($eventCliCommand);
+
+        $dispatcher->dispatchCommandEvent("post-install-cmd");
+    }
+
     private function getDispatcherStubForListenersTest($listeners, $io)
     {
         $dispatcher = $this->getMockBuilder('Composer\Script\EventDispatcher')
